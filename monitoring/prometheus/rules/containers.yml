@@ -1,0 +1,36 @@
+---
+# Container alerts (architecture/006 coverage matrix, cAdvisor row).
+groups:
+  - name: containers
+    rules:
+      - alert: ContainerOomKilled
+        expr: increase(container_oom_events_total{name!=""}[15m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.name }} was OOM-killed"
+          description: >
+            Its mem_limit is too small for what it does — raise it via
+            PR and update the architecture/005 budget.
+
+      - alert: ContainerRestartLoop
+        expr: changes(container_start_time_seconds{name!=""}[15m]) > 3
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.name }} restarted >3 times in 15m"
+          description: >
+            Crash-looping — check `docker logs {{ $labels.name }}` (or
+            Dockge) before it pages again.
+
+      - alert: CoreContainerAbsent
+        expr: >
+          time() - container_last_seen{
+            name=~"traefik|authelia|pihole|wireguard"} > 300
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.name }} has been gone for 5 minutes"
+          description: >
+            An infrastructure container is not running — everything
+            behind it is down or unreachable.

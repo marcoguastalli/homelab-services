@@ -1,0 +1,37 @@
+---
+# _template — the living STD-002 example. New services start as a copy
+# of this directory (intake checklist: homelab-docs architecture/005).
+# The `_` prefix keeps it out of deploy detection; CI still renders it,
+# so it can never rot. Replace every "myservice" (STD-001: one name
+# everywhere) and the image pin, then delete comments that don't apply.
+name: myservice
+services:
+  myservice:
+    image: nginx:1.28.0                    # exact pin, never latest (rule 2)
+    container_name: myservice
+    restart: unless-stopped
+    env_file:                              # long syntax: CI renders without
+      - path: /srv/homelab/secrets/myservice.env
+        required: false                    # deploy.sh asserts it on the Pi
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m                        # update architecture/005 budget!
+    cpus: 1.0
+    healthcheck:                           # the deploy gate (rule 6)
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ${DATA_ROOT}/myservice:/data       # bind mounts only (rule 4)
+    networks: [net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.myservice.rule: Host(`myservice.kirito.com`)
+      traefik.http.routers.myservice.entrypoints: websecure
+      traefik.http.routers.myservice.middlewares: authelia@file
+      traefik.http.services.myservice.loadbalancer.server.port: "80"
+      homepage.group: Platform
+      homepage.name: MyService
+      kirito.backup: "true"                # stateful ⇒ also ship dump.sh
+networks:
+  net_proxy: {external: true}

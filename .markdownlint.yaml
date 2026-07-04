@@ -1,0 +1,19 @@
+# markdownlint configuration — consumed by CI and editors.
+---
+default: true
+
+# Line length: relaxed for tables and code blocks, 100 chars for prose.
+MD013:
+  line_length: 100
+  tables: false
+  code_blocks: false
+
+# Allow duplicate headings in different sections (e.g. "Rationale" in every ADR).
+MD024:
+  siblings_only: true
+
+# Inline HTML is allowed (used sparingly for tables/details).
+MD033: false
+
+# First line does not need to be a top-level heading (frontmatter-style files).
+MD041: false

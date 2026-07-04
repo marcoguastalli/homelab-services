@@ -1,0 +1,50 @@
+---
+# Duplicati — nightly (03:00) AES-256 encrypted, deduplicated backup of
+# data/, secrets/ and state/ to the USB pendrive at /mnt/backup
+# (ADR-007, architecture/007). Sources are mounted read-only: the
+# backup tool cannot damage what it protects. Runs as root — it must
+# read files owned by every service uid.
+name: duplicati
+services:
+  duplicati:
+    image: duplicati/duplicati:2.3.0.3
+    container_name: duplicati
+    restart: unless-stopped
+    env_file:
+      - path: /srv/homelab/secrets/duplicati.env
+        required: false
+    environment:
+      DUPLICATI__WEBSERVICE_ALLOWED_HOSTNAMES: backup.kirito.com
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 1.0
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - wget -qO- http://localhost:8200/ >/dev/null || curl -fsS http://localhost:8200/ >/dev/null
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ${DATA_ROOT}/duplicati:/data
+      # The whole backup scope (architecture/007), read-only:
+      - ${DATA_ROOT}:/source/data:ro
+      - /srv/homelab/secrets:/source/secrets:ro
+      - /srv/homelab/state:/source/state:ro
+      # Target as seen in DUPLICATI_URL (file:///backup/homelab):
+      - /mnt/backup:/backup
+      # Post-backup metric for the 26h freshness alert:
+      - ./scripts/report-status.sh:/scripts/report-status.sh:ro
+      - ${DATA_ROOT}/monitoring/textfiles:/textfiles
+    networks: [net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.duplicati.rule: Host(`backup.kirito.com`)
+      traefik.http.routers.duplicati.entrypoints: websecure
+      traefik.http.routers.duplicati.middlewares: authelia@file
+      traefik.http.services.duplicati.loadbalancer.server.port: "8200"
+      homepage.group: Platform
+      homepage.name: Duplicati
+      kirito.backup: "true"
+networks:
+  net_proxy: {external: true}

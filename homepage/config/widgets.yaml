@@ -1,0 +1,9 @@
+---
+- greeting:
+    text_size: xl
+    text: kirito.com homelab
+- datetime:
+    text_size: l
+    format:
+      dateStyle: long
+      timeStyle: short

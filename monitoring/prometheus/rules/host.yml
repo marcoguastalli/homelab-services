@@ -1,0 +1,41 @@
+---
+# Host alerts (architecture/006 coverage matrix, node-exporter row).
+groups:
+  - name: host
+    rules:
+      - alert: HostDiskAlmostFull
+        expr: >
+          (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay"}
+           / node_filesystem_size_bytes{fstype!~"tmpfs|overlay"}) < 0.2
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.mountpoint }} is over 80% full"
+          description: >
+            {{ $value | humanizePercentage }} free on
+            {{ $labels.device }} — the SSD filling up takes every
+            service down with it.
+
+      - alert: HostMemoryPressure
+        expr: >
+          (1 - node_memory_MemAvailable_bytes
+           / node_memory_MemTotal_bytes) > 0.9
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Memory above 90% for 10 minutes"
+          description: >
+            Check the RAM budget in architecture/005 — something is
+            over its mem_limit assumptions or the budget is stale.
+
+      - alert: HostHighCpuTemperature
+        expr: node_thermal_zone_temp > 75
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CPU temperature {{ $value }}°C"
+          description: >
+            Above 75°C the Pi 5 starts throttling — check cooling.

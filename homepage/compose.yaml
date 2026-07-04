@@ -1,0 +1,43 @@
+---
+# Homepage — the household launcher (home.kirito.com, one_factor).
+# Config is fully static and Git-managed: no docker socket here —
+# architecture/004 limits socket mounts to traefik/cAdvisor/dockge, so
+# service tiles are declared in config/services.yaml, not discovered.
+name: homepage
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:v1.13.2
+    container_name: homepage
+    restart: unless-stopped
+    env_file:
+      - path: /srv/homelab/secrets/homepage.env
+        required: false
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: home.kirito.com
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      # Individual ro mounts (authelia pattern): the app can still write
+      # its runtime scratch (logs, generated skeletons) to the ephemeral
+      # container fs. Stateless by design — nothing to back up.
+      - ./config/settings.yaml:/app/config/settings.yaml:ro
+      - ./config/services.yaml:/app/config/services.yaml:ro
+      - ./config/widgets.yaml:/app/config/widgets.yaml:ro
+      - ./config/bookmarks.yaml:/app/config/bookmarks.yaml:ro
+    networks: [net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.homepage.rule: Host(`home.kirito.com`)
+      traefik.http.routers.homepage.entrypoints: websecure
+      traefik.http.routers.homepage.middlewares: authelia@file
+      traefik.http.services.homepage.loadbalancer.server.port: "3000"
+      homepage.group: Platform
+      homepage.name: Homepage
+networks:
+  net_proxy: {external: true}

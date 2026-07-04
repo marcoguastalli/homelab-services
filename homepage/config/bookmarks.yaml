@@ -1,0 +1,12 @@
+---
+- Repositories:
+    - homelab-docs:
+        - href: https://github.com/marcoguastalli/homelab-docs
+    - homelab-bootstrap:
+        - href: https://github.com/marcoguastalli/homelab-bootstrap
+    - homelab-ops:
+        - href: https://github.com/marcoguastalli/homelab-ops
+    - homelab-infrastructure:
+        - href: https://github.com/marcoguastalli/homelab-infrastructure
+    - homelab-services:
+        - href: https://github.com/marcoguastalli/homelab-services

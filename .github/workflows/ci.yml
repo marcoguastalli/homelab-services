@@ -1,0 +1,21 @@
+---
+# PR validation — delegated to the shared implementation in homelab-ops
+# (ADR-006). Required status contexts on main are the nested job names:
+# "validate / yamllint", "validate / markdownlint", "validate / gitleaks",
+# "validate / compose", "validate / shell".
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: marcoguastalli/homelab-ops/.github/workflows/reusable-validate.yml@main
+    with:
+      compose: true
+      shell: true

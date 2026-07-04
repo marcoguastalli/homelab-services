@@ -1,0 +1,16 @@
+---
+title: kirito.com
+theme: dark
+color: slate
+headerStyle: clean
+hideVersion: true
+layout:
+  Infrastructure:
+    style: row
+    columns: 4
+  Monitoring:
+    style: row
+    columns: 4
+  Platform:
+    style: row
+    columns: 3

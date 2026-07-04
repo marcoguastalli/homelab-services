@@ -1,0 +1,27 @@
+---
+# Routing per architecture/006: critical → immediate ntfy push,
+# warning → daily digest, info → visible in the UI only. The ntfy
+# topic URLs are credentials → url_file from the secrets mount, never
+# in this file.
+route:
+  receiver: none
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  routes:
+    - matchers: ['severity="critical"']
+      receiver: ntfy-critical
+    - matchers: ['severity="warning"']
+      receiver: ntfy-warning
+      group_interval: 24h
+      repeat_interval: 24h
+
+receivers:
+  - name: none
+  - name: ntfy-critical
+    webhook_configs:
+      - url_file: /secrets/ntfy-critical-url
+  - name: ntfy-warning
+    webhook_configs:
+      - url_file: /secrets/ntfy-warning-url

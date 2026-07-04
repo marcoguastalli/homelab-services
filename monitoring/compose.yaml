@@ -1,0 +1,162 @@
+---
+# Monitoring — white-box metrics + alerting, one stack = one failure
+# domain (ADR-005). Prometheus scrapes node-exporter/cAdvisor over
+# monitoring_internal and traefik:8082 over net_monitoring; the three
+# UIs (grafana/prometheus/alerts .kirito.com) join net_proxy.
+# Alertmanager pushes to ntfy — the topic URL is a secret, so it lives
+# in url_file mounts from /srv/homelab/secrets/monitoring/, not here.
+name: monitoring
+services:
+  prometheus:
+    image: prom/prometheus:v3.13.0
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.external-url=https://prometheus.kirito.com/
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - ${DATA_ROOT}/monitoring/prometheus:/prometheus
+    networks: [monitoring_internal, net_monitoring, net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.prometheus.rule: Host(`prometheus.kirito.com`)
+      traefik.http.routers.prometheus.entrypoints: websecure
+      traefik.http.routers.prometheus.middlewares: authelia@file
+      traefik.http.services.prometheus.loadbalancer.server.port: "9090"
+      homepage.group: Monitoring
+      homepage.name: Prometheus
+
+  alertmanager:
+    image: prom/alertmanager:v0.33.0
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=https://alerts.kirito.com/
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - /srv/homelab/secrets/monitoring:/secrets:ro
+      - ${DATA_ROOT}/monitoring/alertmanager:/alertmanager
+    networks: [monitoring_internal, net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.alertmanager.rule: Host(`alerts.kirito.com`)
+      traefik.http.routers.alertmanager.entrypoints: websecure
+      traefik.http.routers.alertmanager.middlewares: authelia@file
+      traefik.http.services.alertmanager.loadbalancer.server.port: "9093"
+      homepage.group: Monitoring
+      homepage.name: Alertmanager
+
+  grafana:
+    image: grafana/grafana-oss:13.0.2
+    container_name: grafana
+    restart: unless-stopped
+    env_file:
+      - path: /srv/homelab/secrets/monitoring.env
+        required: false
+    environment:
+      GF_SERVER_ROOT_URL: https://grafana.kirito.com
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+      - ${DATA_ROOT}/monitoring/grafana:/var/lib/grafana
+    networks: [monitoring_internal, net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.grafana.rule: Host(`grafana.kirito.com`)
+      traefik.http.routers.grafana.entrypoints: websecure
+      traefik.http.routers.grafana.middlewares: authelia@file
+      traefik.http.services.grafana.loadbalancer.server.port: "3000"
+      homepage.group: Monitoring
+      homepage.name: Grafana
+      kirito.backup: "true"
+
+  node-exporter:
+    image: prom/node-exporter:v1.11.1
+    container_name: node-exporter
+    restart: unless-stopped
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.textfile.directory=/textfiles
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|run|var/lib/docker)($|/)
+    security_opt: [no-new-privileges:true]
+    mem_limit: 64m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9100/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      # Written by duplicati/scripts/report-status.sh after each backup
+      # (architecture/006: "Duplicati status → textfile exporter").
+      - ${DATA_ROOT}/monitoring/textfiles:/textfiles:ro
+    networks: [monitoring_internal]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    container_name: cadvisor
+    restart: unless-stopped
+    command:
+      - --housekeeping_interval=30s
+      - --docker_only=true
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.5
+    devices:
+      - /dev/kmsg
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      # ro docker socket: the accepted observability exception
+      # (architecture/004, shared with traefik and dockge).
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    networks: [monitoring_internal]
+
+networks:
+  monitoring_internal:
+  net_monitoring: {external: true}
+  net_proxy: {external: true}

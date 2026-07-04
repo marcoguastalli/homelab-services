@@ -1,0 +1,18 @@
+---
+# Deploy on merge to main — delegated to homelab-ops reusable-deploy,
+# which detects the changed stacks and runs them one at a time on the
+# Pi's self-hosted runner (architecture/009).
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    uses: marcoguastalli/homelab-ops/.github/workflows/reusable-deploy.yml@main
+    with:
+      repo: homelab-services

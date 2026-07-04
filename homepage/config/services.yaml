@@ -1,0 +1,38 @@
+---
+# Static tiles — one per row of the service catalog
+# (homelab-docs architecture/005). No docker discovery (no socket).
+- Infrastructure:
+    - Traefik:
+        href: https://traefik.kirito.com
+        description: Ingress dashboard
+    - Pi-hole:
+        href: https://dns.kirito.com
+        description: DNS + ad-blocking
+    - WireGuard:
+        href: https://vpn.kirito.com
+        description: VPN peers
+    - Authelia:
+        href: https://auth.kirito.com
+        description: SSO portal
+
+- Monitoring:
+    - Grafana:
+        href: https://grafana.kirito.com
+        description: Dashboards
+    - Prometheus:
+        href: https://prometheus.kirito.com
+        description: Metrics
+    - Alertmanager:
+        href: https://alerts.kirito.com
+        description: Alert routing
+    - Uptime Kuma:
+        href: https://status.kirito.com
+        description: Status page
+
+- Platform:
+    - Dockge:
+        href: https://dockge.kirito.com
+        description: Stacks & logs (read-only)
+    - Duplicati:
+        href: https://backup.kirito.com
+        description: Backups

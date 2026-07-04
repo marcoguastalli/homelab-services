@@ -1,0 +1,36 @@
+---
+# Uptime Kuma — black-box HTTP checks on every *.kirito.com endpoint
+# plus the status page (status.kirito.com, one_factor). Deliberately
+# independent of the Prometheus stack: white-box and black-box monitors
+# must fail independently (architecture/006).
+name: uptime-kuma
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:2.4.0
+    container_name: uptime-kuma
+    restart: unless-stopped
+    env_file:
+      - path: /srv/homelab/secrets/uptime-kuma.env
+        required: false
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "extra/healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    volumes:
+      - ${DATA_ROOT}/uptime-kuma:/app/data
+    networks: [net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.uptime-kuma.rule: Host(`status.kirito.com`)
+      traefik.http.routers.uptime-kuma.entrypoints: websecure
+      traefik.http.routers.uptime-kuma.middlewares: authelia@file
+      traefik.http.services.uptime-kuma.loadbalancer.server.port: "3001"
+      homepage.group: Monitoring
+      homepage.name: Uptime Kuma
+      kirito.backup: "true"
+networks:
+  net_proxy: {external: true}

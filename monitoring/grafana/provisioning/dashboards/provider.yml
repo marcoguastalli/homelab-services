@@ -1,0 +1,13 @@
+---
+# Dashboards as code (architecture/006): everything under
+# grafana/dashboards/ in Git appears in the "Homelab" folder. UI edits
+# must be exported and committed to be kept.
+apiVersion: 1
+providers:
+  - name: homelab
+    folder: Homelab
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 60
+    options:
+      path: /etc/grafana/dashboards

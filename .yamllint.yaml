@@ -1,0 +1,11 @@
+# yamllint configuration — consumed by CI (auto-discovered) and editors.
+---
+extends: default
+
+rules:
+  # GitHub Actions uses "on:" as a key; the truthy rule false-positives on it.
+  truthy:
+    check-keys: false
+  # 80 is too tight for workflow args and commented config; prose rule is 100.
+  line-length:
+    max: 120

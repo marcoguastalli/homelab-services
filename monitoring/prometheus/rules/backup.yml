@@ -1,0 +1,37 @@
+---
+# Backup alerts — "the alert that matters most" (architecture/006).
+# Metrics come from duplicati/scripts/report-status.sh via the
+# node-exporter textfile collector.
+groups:
+  - name: backup
+    rules:
+      - alert: BackupTooOld
+        expr: time() - duplicati_last_backup_unixtime > 93600
+        labels:
+          severity: critical
+        annotations:
+          summary: "No backup completed in >26h"
+          description: >
+            The nightly 03:00 Duplicati job did not run — pendrive
+            unmounted? Container down? RPO is now broken.
+
+      - alert: BackupFailed
+        expr: duplicati_last_backup_success == 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "Last Duplicati backup failed"
+          description: >
+            The job ran but did not succeed — check the Duplicati log
+            at https://backup.kirito.com before the next cycle.
+
+      - alert: BackupMetricMissing
+        expr: absent(duplicati_last_backup_unixtime)
+        for: 6h
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup status metric is absent"
+          description: >
+            node-exporter is not seeing duplicati.prom — the textfile
+            wiring is broken, so backup failures would go unnoticed.

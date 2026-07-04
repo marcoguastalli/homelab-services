@@ -1,0 +1,44 @@
+---
+# Dockge — read-only stack/log observability (ADR-015). Git is the only
+# write path: the repo checkouts are mounted read-only, the console is
+# disabled, and any stack edit goes through a PR. The ro docker socket
+# is the accepted observability exception (architecture/004, shared
+# with traefik and cAdvisor).
+name: dockge
+services:
+  dockge:
+    image: louislam/dockge:1.5.0
+    container_name: dockge
+    restart: unless-stopped
+    env_file:
+      - path: /srv/homelab/secrets/dockge.env
+        required: false
+    environment:
+      DOCKGE_STACKS_DIR: /srv/homelab/repos
+      DOCKGE_ENABLE_CONSOLE: "false"
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "extra/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Same path inside and out so compose project paths resolve; ro
+      # is the ADR-015 guard — Dockge can read stacks, never edit them.
+      - /srv/homelab/repos:/srv/homelab/repos:ro
+      - ${DATA_ROOT}/dockge:/app/data
+    networks: [net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.dockge.rule: Host(`dockge.kirito.com`)
+      traefik.http.routers.dockge.entrypoints: websecure
+      traefik.http.routers.dockge.middlewares: authelia@file
+      traefik.http.services.dockge.loadbalancer.server.port: "5001"
+      homepage.group: Platform
+      homepage.name: Dockge
+      kirito.backup: "true"
+networks:
+  net_proxy: {external: true}
