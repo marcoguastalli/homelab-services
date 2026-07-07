@@ -37,13 +37,14 @@ The raw Alertmanager JSON body is what arrives on the phone —
 functional, not pretty; a formatting bridge is a possible future
 improvement, not a dependency.
 
-## Pi preparation (first deploy)
+## Data-dir ownership (`prepare.sh`)
 
-```bash
-sudo mkdir -p /srv/homelab/data/monitoring/{prometheus,grafana,alertmanager,textfiles,dumps}
-sudo chown 65534:65534 /srv/homelab/data/monitoring/prometheus   # nobody
-sudo chown 472:472 /srv/homelab/data/monitoring/grafana          # grafana
-```
+Docker creates missing bind-mount dirs `root:root`, but grafana runs
+as uid 472 and prometheus/alertmanager as 65534 — on a fresh install
+they crash-loop on "permission denied". `prepare.sh` (run by ops
+`deploy.sh` before every `compose up`) creates and chowns the dirs via
+a throwaway alpine container, so no manual Pi preparation is needed.
+Deploying by hand outside `deploy.sh`? Run `./prepare.sh` first.
 
 ## Backup
 

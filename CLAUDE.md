@@ -22,7 +22,7 @@ rule 2). Every version in this repo, and its coupling:
 |---|---|---|
 | Service images | `<stack>/compose.yaml` `image:` lines | — |
 | Duplicati image | `duplicati/compose.yaml` **and** `DUPLICATI_IMAGE` in `duplicati/.env.example` | Must match each other, **and** the real `/srv/homelab/secrets/duplicati.env` on the Pi must be edited by hand at deploy time — ops `verify-backup.sh`/`restore-stack.sh` run whatever that file names |
-| Dump-helper image | `alpine:3.21` in `monitoring/dump.sh`, `uptime-kuma/dump.sh` | Same pin in `homelab-infrastructure/authelia/dump.sh` — bump all three together |
+| Dump/prep-helper image | `alpine:3.21` in `monitoring/dump.sh`, `monitoring/prepare.sh`, `uptime-kuma/dump.sh` | Same pin in `homelab-infrastructure/authelia/dump.sh` — bump all four together |
 | Template image | `_template/compose.yaml` (`nginx`) | Never deployed; keep roughly current so copies start sane |
 | Reusable workflows | `.github/workflows/{ci,deploy}.yml` reference `homelab-ops@main` | Deliberately unpinned — ops main is the platform contract |
 
