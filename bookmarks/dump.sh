@@ -17,6 +17,6 @@ if ! docker inspect -f '{{.State.Running}}' bookmarks-db 2>/dev/null | grep -q t
 fi
 
 docker exec bookmarks-db pg_dump -U bookmarks -d bookmarks \
-  > "${DUMP_DIR}/bookmarks.sql.tmp"
+  >"${DUMP_DIR}/bookmarks.sql.tmp"
 mv "${DUMP_DIR}/bookmarks.sql.tmp" "${DUMP_DIR}/bookmarks.sql"
 printf '[bookmarks-dump] OK: %s\n' "${DUMP_DIR}/bookmarks.sql"
