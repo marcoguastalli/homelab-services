@@ -19,9 +19,14 @@ services:
     mem_limit: 256m
     cpus: 1.0
     healthcheck:
+      # The image ships neither wget nor curl (the old probe exited 127
+      # forever → permanently unhealthy). It does ship bash — a raw
+      # /dev/tcp connect to the web UI port is the whole probe.
       test:
-        - CMD-SHELL
-        - wget -qO- http://localhost:8200/ >/dev/null || curl -fsS http://localhost:8200/ >/dev/null
+        - CMD
+        - bash
+        - -c
+        - exec 3<>/dev/tcp/127.0.0.1/8200 && exec 3>&-
       interval: 30s
       timeout: 5s
       retries: 3

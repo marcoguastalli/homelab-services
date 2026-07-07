@@ -28,9 +28,9 @@ matter most). Weekly restorability proof is homelab-ops
 
 ## Notes
 
-- The healthcheck probes the login page with wget-or-curl; if a future
-  image drops both, the deploy gate will say so loudly — swap in a
-  `duplicati-cli` based probe then.
+- The healthcheck is a bash `/dev/tcp` connect to the web UI port —
+  the image ships neither wget nor curl. It proves the listener is up,
+  not that HTTP answers; good enough for the deploy gate.
 - `mem_limit: 256m` assumes household-sized backup sets on .NET 8; an
   OOM-killed backup run trips `ContainerOomKilled` + `BackupTooOld` —
   raise the limit via PR and update the architecture/005 budget.
