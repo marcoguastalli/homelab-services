@@ -1,0 +1,69 @@
+---
+# bookmarks — Bun/Hono bookmarks API + UI (ghcr.io/marcoguastalli/
+# app-bookmarks) with a dedicated PostgreSQL. The app self-migrates at
+# startup (waits for the DB with retries). Only the app joins
+# net_proxy; Postgres is reachable solely over bookmarks_internal.
+name: bookmarks
+services:
+  bookmarks:
+    image: ghcr.io/marcoguastalli/app-bookmarks:1.2.32
+    container_name: bookmarks
+    restart: unless-stopped
+    env_file:
+      - path: /srv/homelab/secrets/bookmarks.env
+        required: false
+    environment:
+      PORT: "3000"
+      NODE_ENV: production
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 1.0
+    depends_on:
+      bookmarks-db:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1, not localhost: busybox resolves localhost to ::1
+      # first and Bun.serve binds IPv4 (same trap as wg-easy).
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [bookmarks_internal, net_proxy]
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.bookmarks.rule: Host(`bookmarks.kirito.com`)
+      traefik.http.routers.bookmarks.entrypoints: websecure
+      traefik.http.routers.bookmarks.middlewares: authelia@file
+      traefik.http.services.bookmarks.loadbalancer.server.port: "3000"
+      homepage.group: Platform
+      homepage.name: Bookmarks
+
+  bookmarks-db:
+    image: postgres:17.5-alpine
+    container_name: bookmarks-db
+    restart: unless-stopped
+    env_file:
+      # POSTGRES_PASSWORD comes from the same secrets file as the app's
+      # DATABASE_URL — they must agree.
+      - path: /srv/homelab/secrets/bookmarks.env
+        required: false
+    environment:
+      POSTGRES_USER: bookmarks
+      POSTGRES_DB: bookmarks
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "bookmarks", "-d", "bookmarks"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - ${DATA_ROOT}/bookmarks/postgres:/var/lib/postgresql/data
+    networks: [bookmarks_internal]
+    labels:
+      kirito.backup: "true"                # dumps via dump.sh
+
+networks:
+  bookmarks_internal: {}
+  net_proxy: {external: true}
