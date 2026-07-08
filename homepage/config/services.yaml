@@ -30,6 +30,9 @@
         description: Status page
 
 - Platform:
+    - Bookmarks:
+        href: https://bookmarks.kirito.com
+        description: Bookmarks app
     - Dockge:
         href: https://dockge.kirito.com
         description: Stacks & logs (read-only)
